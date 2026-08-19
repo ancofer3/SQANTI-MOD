@@ -46,7 +46,8 @@ def collapseCIGARs(tsv):
 				occupancies.append(occ)
 			
 			# Y lo añadimos
-			fila_tx[f"CIGAR_{mod}"] = "".join(cigar_parts)
+			fila_tx[f"Posiciones_{mod}"] = sorted_pos
+			fila_tx[f"Coverage_{mod}"] = local_coverages
 			fila_tx[f"Occupancy_{mod}"] = occupancies
 		resultados_transcritos.append(fila_tx)
 	df_transcrito = pd.DataFrame(resultados_transcritos)
