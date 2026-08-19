@@ -1,8 +1,10 @@
 import pandas as pd
 import glob
-import re
+import numpy as np
 
-# Aqui tenemos que hacer que saque una occupancy local en función de cuantas reads solapan con esa posicion
+'''OJO: Faltaria ver como incorporamos las probabilidades. Alomejor lo mejor es que ya desde el principio se de
+la prob límite que quieres usar para cada mod y en base a eso extraigamos antes solo las que pasen el filtro.
+'''
 
 def collapseCIGARs(tsv):
 	pos_cols = [col for col in tsv.columns if col.startswith("positions_")]
@@ -28,8 +30,20 @@ def collapseCIGARs(tsv):
 					pos_counts[pos] += 1
 			# Nos quedamos con todas las posiciones posibles
 			sorted_pos = sorted(pos_counts.keys())
-			cigar_parts = []
+			starts = group["tx_start"].values
+			ends = group["tx_end"].values
+			
+			local_coverages = []
 			occupancies = []
+
+			for pos in sorted_pos:
+				# Una lectura cubre pos si tx_start <= pos <= tx_end
+				n_cov = np.sum((starts <= pos) & (ends >= pos))
+				n_mod = pos_counts[pos]
+				occ = round(n_mod / n_cov, 4) if n_cov > 0 else 0.0
+
+				local_coverages.append(n_cov)
+				occupancies.append(occ)
 			
 			# Y lo añadimos
 			fila_tx[f"CIGAR_{mod}"] = "".join(cigar_parts)
