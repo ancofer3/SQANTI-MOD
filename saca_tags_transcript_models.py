@@ -142,9 +142,9 @@ def tablaMods(path):
     nombre = "_".join(os.path.basename(path).split(".")[0].split("_")[0:2])
     
     # Cargamos toda la información complementaria a los sams
-    bed_path = f"data/beds/{nombre}_filtered.bed" 
-    gtf_path = f"reconstruction/isoquant/{nombre}/{nombre}/{nombre}.extended_annotation.gtf"
-    assoc_path = f"reconstruction/isoquant/{nombre}/{nombre}/{nombre}.transcript_model_reads.tsv.gz"
+    bed_path = f"../iPSCs/data/beds/{nombre}_filtered.bed" 
+    gtf_path = f"../iPSCs/reconstruction/isoquant/{nombre}/{nombre}/{nombre}.extended_annotation.gtf"
+    assoc_path = f"../iPSCs/reconstruction/isoquant/{nombre}/{nombre}/{nombre}.transcript_model_reads.tsv.gz"
     if not os.path.exists(gtf_path) or not os.path.exists(assoc_path):
         return f"Error: Archivos de IsoQuant no encontrados para {nombre}"
     
@@ -268,7 +268,7 @@ def tablaMods(path):
 
 if __name__ == '__main__':
     cpus_slurm = int(os.environ.get('SLURM_CPUS_PER_TASK', 1))
-    archivos_bam = glob.glob("data/bams_primary/*primary.bam")
+    archivos_bam = glob.glob("../iPSCs/data/bams_primary/*primary.bam")
     print(f"Se han encontrado {len(archivos_bam)} archivos BAM.")
     print(f"Ejecutando en PARALELO utilizando {cpus_slurm} CPUs...\n")
     # Lanzar un "Pool" de trabajadores. Procesará N archivos a la vez.
