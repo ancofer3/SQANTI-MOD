@@ -12,6 +12,10 @@ cod_mod_largo = {"m":"m5C","a":"m6A", "19228":"2OmeC", "17802":"pseU","19227":"2
 cod_mod_1 = {"m":"m","a":"a", "19228":"C", "17802":"P","19227":"U", "17596":"I" , "69426":"A"}
 
 def prob_ASCII(prob:float) -> str:
+    '''
+    We convert the prob of the mods (from 0 to 255) to a character 
+    in the range of 33 to 126 (printable ASCII characters)
+    '''
     if prob >= 0 and prob <= 256:
         ascii_code = chr(33 + round((prob * 93) / 256))
     else:
@@ -20,6 +24,10 @@ def prob_ASCII(prob:float) -> str:
     return ascii_code
 
 def cargaBed(path: str) -> set:
+    '''
+    We load the bed file with filtered sites and return a set of tuples 
+    (chrom, start_position, strand)
+    '''
     conf_sites = set()
     with open(path, "r") as f:
         for line in f:
@@ -32,7 +40,11 @@ def cargaBed(path: str) -> set:
     return conf_sites
 
 def cargaRead_Transcrito(path:str) -> dict:
-    # Sacamos la relacion read_id-transcript_id
+    '''
+    We extract the read_id to transcript_id association from the relations 
+    file. It recieves a path to a tsv file and returns a dictionary 
+    {read_id: transcript_id}
+    '''
     read_tx = {}
     open_fn = gzip.open if path.endswith("gz") else open
     with open_fn(path,"rt") as f:
@@ -45,7 +57,19 @@ def cargaRead_Transcrito(path:str) -> dict:
     return read_tx
 
 def cargaGTF(gtf_path: str) -> dict:
-    "Parseamos GTF para sacar la estructura de exones y al longitud del transcrito"
+    '''
+    We extract from the gtf file the transcript structure and return a dict
+    with the structure:
+    {transcript_id: 
+        {"chrom": chrom, 
+        "strand": strand, 
+        "exons": [(ini, fin), ...]}, 
+        "exons_offset": [(ini, fin, offset), ...], 
+        "total_length": total_length}} 
+    where exons are sorted by strand and exons_offset contains the 
+    length of exons before the current one, and total_length is the total 
+    length of the transcript.
+    '''
     tx_dict = {}
     with open(gtf_path, "rt") as f:
         for line in f:
@@ -93,6 +117,10 @@ def cargaGTF(gtf_path: str) -> dict:
     return tx_dict        
 
 def genome_to_tx(ref_pos: int, tx_info: dict) -> int:
+    '''
+    We convert a genomic position to a transcript position based on the exons
+    structure
+    '''
     strand = tx_info["strand"]
     # Recorremos todos los exones
     for ini, fin, offset in tx_info["exons_offset"]:
@@ -107,6 +135,10 @@ def genome_to_tx(ref_pos: int, tx_info: dict) -> int:
     return None
     
 def tablaMods(path):
+    ''' 
+    We generate a tsv file with the CIGAR and Probs for each read in the bam 
+    file. 
+    '''
     nombre = "_".join(os.path.basename(path).split(".")[0].split("_")[0:2])
     
     # Cargamos toda la información complementaria a los sams
@@ -201,12 +233,16 @@ def tablaMods(path):
                 
                 if bases_res > 0:
                     cigar_parts.append(f"{bases_res}U")
+                '''
                 if prob_parts:
                     fila[f"CIGAR_{cod_mod_largo[mod]}"] = "".join(cigar_parts)
                     fila[f"Probs_{cod_mod_largo[mod]}"] = "".join(prob_parts)
                 else:
                     fila[f"CIGAR_{cod_mod_largo[mod]}"] = f"{tx_length}U"
                     fila[f"Probs_{cod_mod_largo[mod]}"] = ""
+                '''
+                fila[f"positions_{cod_mod_largo[mod]}"] = [pos for pos, _ in valid_mods]
+                fila[f"probabilities_{cod_mod_largo[mod]}"] = [prob_ASCII(prob) for _, prob in valid_mods]
 
             filas_lecturas.append(fila)
     samfile.close()

@@ -17,4 +17,6 @@ for bam in $bams_path; do
 		--modified-bases m5C m6A 2OmeC pseU 2OmeU inosine 2OmeA \
 		--reference ../genomes/hg38/hg38.fa \
 		--log logs/pileup.txt
+	# Conservamos sitios con cobertura minima genómica >= 5 para para quitar ruido
+	awk '($10 >= 5) || /^#/' data/beds/${name}.bed > data/beds/${name}_filtered.bed
 done
