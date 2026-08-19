@@ -8,4 +8,4 @@
 #SBATCH --qos=short
 module load anaconda
 conda activate jae_env
-python -u resume_Cigars_y_mergea.py
+python -u collapse_to_tx_and_merge.py

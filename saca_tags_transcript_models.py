@@ -171,10 +171,24 @@ def tablaMods(path):
         tx_length = tx_info["total_length"]
         
         length = read.query_length
+        # Para sacar donde empieza y acaba la read en el transcrito
+        # Obtenemos pares de alineamiento (base_read, base_genoma)
+        aligned_pairs = [r for q, r in read.get_aligned_pairs(matches_only=True) if q is not None and r is not None]
+
+        # Convertimos las coordenadas genómicas a coordenadas de transcrito
+        tx_positions = [genome_to_tx(r, tx_info) for r in aligned_pairs]
+
+        # Limpiamos valores nulos (posiciones fuera de los exones definidos)
+        tx_positions = [p for p in tx_positions if p is not None]
+
+        # Extraemos el mínimo y el máximo
+        tx_start, tx_end = min(tx_positions), max(tx_positions)
         # Nuestra fila para el TSV final
         fila = {"isoform": read_id, 
                 "transcript_id":tx_id,
-                "transcript_length":tx_length}
+                "transcript_length":tx_length,
+                "tx_start":tx_start,
+                "tx_end":tx_end,}
         
         try:
             # Dict[(canonical base, strand, modification)] -> [ (pos,qual), …] 

@@ -2,9 +2,11 @@ import pandas as pd
 import glob
 import re
 
+# Aqui tenemos que hacer que saque una occupancy local en función de cuantas reads solapan con esa posicion
+
 def collapseCIGARs(tsv):
-	cigar_cols = [col for col in tsv.columns if col.startswith("CIGAR")]
-	mod_types = [col.replace("CIGAR_","") for col in cigar_cols]
+	pos_cols = [col for col in tsv.columns if col.startswith("positions_")]
+	mod_types = [col.replace("positions_","") for col in pos_cols]
 	resultados_transcritos = []
 	# Para cada transcript_id
 	for tx_id, group in tsv.groupby("transcript_id"):
@@ -17,45 +19,18 @@ def collapseCIGARs(tsv):
 		}
 		# Para cada modificacion posible
 		for mod in mod_types:
-			cigar_col = f"CIGAR_{mod}"
+			positions_col = f"positions_{mod}"
 			pos_counts = {}
-			for cigar in group[cigar_col].dropna():
-				if cigar == f"{tx_length}U":
-					continue
-				tokens = re.findall(r'(\d+)([A-Za-z]+)', str(cigar))
-				current_pos = 0
-				# Para cada token (num,letra) del CIGAR
-				for len_str, op in tokens:
-					length = int(len_str)
-					if op == "U":
-						current_pos += length
-					else:
-						for i in range(length):
-							real_pos = current_pos + i
-							pos_counts[real_pos] = pos_counts.get(real_pos, 0) + 1
-						current_pos += length
+			for positions in group[positions_col].dropna():
+				for pos in positions:
+					if pos not in pos_counts:
+						pos_counts[pos] = 0
+					pos_counts[pos] += 1
 			# Nos quedamos con todas las posiciones posibles
 			sorted_pos = sorted(pos_counts.keys())
 			cigar_parts = []
 			occupancies = []
-			last_pos = -1
-			# Remontamos el CIGAR
-			for pos in sorted_pos:
-				dist_u = pos -last_pos -1
-				if dist_u > 0:
-					cigar_parts.append(f"{dist_u}U")
-				count = pos_counts[pos]
-				occupancy_abs = count
-				occupancies.append(occupancy_abs)
-				if dist_u == 0 and cigar_parts and cigar_parts[-1].endswith("m"):
-					count_previo = int(cigar_parts[-1][:-1])
-					cigar_parts[-1] = f"{count_previo + 1}m"
-				else:
-					cigar_parts.append(f"1m")
-				last_pos = pos
-			bases_res = tx_length - last_pos - 1
-			if bases_res > 0:
-				cigar_parts.append(f"{bases_res}U")
+			
 			# Y lo añadimos
 			fila_tx[f"CIGAR_{mod}"] = "".join(cigar_parts)
 			fila_tx[f"Occupancy_{mod}"] = occupancies
