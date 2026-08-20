@@ -1,3 +1,4 @@
+import ast
 from tokenize import group
 
 import pandas as pd
@@ -66,17 +67,28 @@ def collapsePositions(tsv):
 			"total_reads" : total_reads
 		}
 		# Asegurar que las coordenadas son numéricas
-		starts = pd.to_numeric(group["tx_start"], errors="coerce").values
-		ends = pd.to_numeric(group["tx_end"], errors="coerce").values
+		starts = group["tx_start"].astype(int).values
+		ends = group["tx_end"].astype(int).values
 		# Para cada modificacion posible
 		for mod in mod_types:
 			positions_col = f"positions_{mod}"
 			pos_counts = {}
 			for positions in group[positions_col].dropna():
+				if isinstance(positions, str):
+					try:
+						if positions.startswith('['):
+							positions = ast.literal_eval(positions)
+						else:
+							positions = positions.split(',')
+					except (ValueError, SyntaxError):
+						continue
 				for pos in positions:
-					if pos not in pos_counts:
-						pos_counts[pos] = 0
-					pos_counts[pos] += 1
+					pos = int(pos)
+					if pos in pos_counts:
+						pos_counts[pos] += 1
+					else:
+						pos_counts[pos] = 1
+
 			# Nos quedamos con todas las posiciones posibles
 			sorted_pos = sorted(pos_counts.keys())
 			starts = group["tx_start"].values
