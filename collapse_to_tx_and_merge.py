@@ -1,6 +1,4 @@
 import ast
-from tokenize import group
-
 import pandas as pd
 import glob
 import numpy as np
@@ -8,6 +6,9 @@ import numpy as np
 '''OJO: Faltaria ver como incorporamos las probabilidades. Alomejor lo mejor es que ya desde el principio se de
 la prob límite que quieres usar para cada mod y en base a eso extraigamos antes solo las que pasen el filtro.
 '''
+# FILTERS recommended by Ghohabi Esfahani et al. (2026) (DOI: 10.1186/s13059-026-04096-w)
+FILTRO_cov = 20
+FILTRO_occ = 0.2
 def pos_to_CIGAR(positions, tx_length):
     # Retorno rápido si no hay modificaciones
     if not positions:
@@ -88,11 +89,11 @@ def collapsePositions(tsv):
 						pos_counts[pos] += 1
 					else:
 						pos_counts[pos] = 1
-
-			# Nos quedamos con todas las posiciones posibles
-			sorted_pos = sorted(pos_counts.keys())
-			starts = group["tx_start"].values
-			ends = group["tx_end"].values
+			# Vamos a quitarnos todas las posiciones que no tengan suficiente cobertura
+			pos_filt = {pos: count for pos, count in pos_counts.items() if count >= FILTRO_cov}
+			# Tambien nos quitamos las que no cumplan con el filtro de ocupancia
+			pos_filt = {pos: count for pos, count in pos_filt.items() if count / np.sum((starts <= pos) & (ends >= pos)) >= FILTRO_occ}
+			sorted_pos = sorted(pos_filt.keys())
 			
 			local_coverages = []
 			occupancies = []
@@ -121,5 +122,5 @@ for i in glob.glob("../iPSCs/SQANTI3_QC_isoquant_*/*classification.txt"):
 	tsv = pd.read_csv(f"tsvs_transcritos/{name}_transcripts_modCIGAR.tsv",sep="\t")
 	tsv_colapsado = collapsePositions(tsv)
 	fusion = cls.merge(tsv_colapsado,how="left",left_on="isoform",right_on="transcript_id")
-	fusion.to_csv(f"data/classifications_mod/{name}_classification_transcripts_mod.tsv", sep="\t")
+	fusion.to_csv(f"data/classifications_mod/{name}_classification_transcripts_mod.tsv", sep="\t", index=False)
 	print("Mergeo terminado con: ",name)
