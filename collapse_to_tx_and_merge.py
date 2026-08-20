@@ -99,15 +99,15 @@ def collapsePositions(tsv):
 
 			for pos in sorted_pos:
 				# Una lectura cubre pos si tx_start <= pos <= tx_end
-				n_cov = np.sum((starts <= pos) & (ends >= pos))
+				n_cov = int(np.sum((starts <= pos) & (ends >= pos)))
 				n_mod = pos_counts[pos]
-				occ = round(n_mod / n_cov, 4) if n_cov > 0 else 0.0
+				occ = float(round(n_mod / n_cov, 4) if n_cov > 0 else 0.0)
 
 				local_coverages.append(n_cov)
 				occupancies.append(occ)
 			
 			# Y lo añadimos
-			fila_tx[f"Posiciones_{mod}"] = sorted_pos
+			fila_tx[f"Positions_{mod}"] = sorted_pos
 			fila_tx[f"Coverage_{mod}"] = local_coverages
 			fila_tx[f"Occupancy_{mod}"] = occupancies
 		resultados_transcritos.append(fila_tx)
