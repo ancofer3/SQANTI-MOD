@@ -171,9 +171,10 @@ def tablaMods(path):
         tx_length = tx_info["total_length"]
         
         length = read.query_length
+        obj_aligned_pairs = read.get_aligned_pairs(matches_only=True)
         # Para sacar donde empieza y acaba la read en el transcrito
         # Obtenemos pares de alineamiento (base_read, base_genoma)
-        aligned_pairs = [r for q, r in read.get_aligned_pairs(matches_only=True) if q is not None and r is not None]
+        aligned_pairs = [r for q, r in obj_aligned_pairs if q is not None and r is not None]
 
         # Convertimos las coordenadas genómicas a coordenadas de transcrito
         tx_positions = [genome_to_tx(r, tx_info) for r in aligned_pairs]
@@ -198,7 +199,7 @@ def tablaMods(path):
         last_pos = -1
         if mods:
             # Hacemos un dic de posicion en la read a genomica
-            query_ref = {q:r for q,r in read.get_aligned_pairs(matches_only=True) if q is not None and r is not None}
+            query_ref = {q:r for q,r in obj_aligned_pairs if q is not None and r is not None}
             chrom = read.reference_name
             strand = "-" if read.is_reverse else "+"
             # Para cada modificacion (canonical base, strand, modification) con su lista de [ (pos,qual), …] 
@@ -206,7 +207,7 @@ def tablaMods(path):
                 base_canon = tupla[0] 
                 mod = str(tupla[2])
                 # Para cuando el id de la mod es un codigo CHEBI
-                mod_str = "m"
+                mod_str = "M"
                 valid_mods = []
                 # Vamos a pasar las coordenadas de prob list a coords a nivel de transcrito
                 for read_pos, prob in probs_list:
@@ -272,7 +273,7 @@ if __name__ == '__main__':
     print(f"Se han encontrado {len(archivos_bam)} archivos BAM.")
     print(f"Ejecutando en PARALELO utilizando {cpus_slurm} CPUs...\n")
     # Lanzar un "Pool" de trabajadores. Procesará N archivos a la vez.
-    with ProcessPoolExecutor(max_workers=len(archivos_bam)) as executor:
+    with ProcessPoolExecutor(max_workers=len(archivos_bam) if len(archivos_bam) <= cpus_slurm else cpus_slurm) as executor:
         resultados = executor.map(tablaMods, archivos_bam)
         # Imprime los avisos de finalización conforme van acabando
         for res in resultados:

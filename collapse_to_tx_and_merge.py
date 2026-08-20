@@ -1,3 +1,5 @@
+from tokenize import group
+
 import pandas as pd
 import glob
 import numpy as np
@@ -5,8 +7,52 @@ import numpy as np
 '''OJO: Faltaria ver como incorporamos las probabilidades. Alomejor lo mejor es que ya desde el principio se de
 la prob límite que quieres usar para cada mod y en base a eso extraigamos antes solo las que pasen el filtro.
 '''
+def pos_to_CIGAR(positions, tx_length):
+    # Retorno rápido si no hay modificaciones
+    if not positions:
+        return f"{tx_length}U"
 
-def collapseCIGARs(tsv):
+    # Eliminamos posibles duplicados y ordenamos
+    sorted_positions = sorted(list(set(positions)))
+    cigar_parts = []
+    
+    # Puntero para rastrear el final de la última anotación (asumiendo coordenadas 0-based)
+    last_unmodified_end = 0 
+    
+    current_start = sorted_positions[0]
+    current_length = 1
+    
+    # Agrupación de posiciones
+    for i in range(1, len(sorted_positions)):
+        if sorted_positions[i] == sorted_positions[i - 1] + 1:
+            current_length += 1
+        else:
+            # 1. Rellenar el gap previo de 'U' si el bloque 'M' no empieza justo donde acabó el anterior
+            if current_start > last_unmodified_end:
+                cigar_parts.append(f"{current_start - last_unmodified_end}U")
+            
+            # 2. Insertar el bloque modificado 'M'
+            cigar_parts.append(f"{current_length}M")
+            
+            # 3. Actualizar el puntero y resetear contadores
+            last_unmodified_end = current_start + current_length
+            current_start = sorted_positions[i]
+            current_length = 1
+
+    # Procesar el último bloque 'M' remanente fuera del loop
+    if current_start > last_unmodified_end:
+        cigar_parts.append(f"{current_start - last_unmodified_end}U")
+    
+    cigar_parts.append(f"{current_length}M")
+    
+    # Calcular y añadir el sufijo 'U' si no hemos alcanzado el límite del transcrito
+    last_unmodified_end = current_start + current_length
+    if last_unmodified_end < tx_length:
+        cigar_parts.append(f"{tx_length - last_unmodified_end}U")
+        
+    return "".join(cigar_parts)
+    
+def collapsePositions(tsv):
 	pos_cols = [col for col in tsv.columns if col.startswith("positions_")]
 	mod_types = [col.replace("positions_","") for col in pos_cols]
 	resultados_transcritos = []
@@ -19,6 +65,9 @@ def collapseCIGARs(tsv):
 			"transcript_length": tx_length,
 			"total_reads" : total_reads
 		}
+		# Asegurar que las coordenadas son numéricas
+		starts = pd.to_numeric(group["tx_start"], errors="coerce").values
+		ends = pd.to_numeric(group["tx_end"], errors="coerce").values
 		# Para cada modificacion posible
 		for mod in mod_types:
 			positions_col = f"positions_{mod}"
@@ -58,7 +107,7 @@ for i in glob.glob("../iPSCs/SQANTI3_QC_isoquant_*/*classification.txt"):
 	print("Empezando a procesar:",name)
 	cls = pd.read_csv(i,sep="\t")
 	tsv = pd.read_csv(f"tsvs_transcritos/{name}_transcripts_modCIGAR.tsv",sep="\t")
-	tsv_colapsado = collapseCIGARs(tsv)
+	tsv_colapsado = collapsePositions(tsv)
 	fusion = cls.merge(tsv_colapsado,how="left",left_on="isoform",right_on="transcript_id")
 	fusion.to_csv(f"data/classifications_mod/{name}_classification_transcripts_mod.tsv", sep="\t")
 	print("Mergeo terminado con: ",name)
