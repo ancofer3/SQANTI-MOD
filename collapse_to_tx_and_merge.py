@@ -53,7 +53,7 @@ def collapseCIGARs(tsv):
 	df_transcrito = pd.DataFrame(resultados_transcritos)
 	return df_transcrito
 
-for i in glob.glob("SQANTI3_QC_isoquant_*/*classification.txt"):
+for i in glob.glob("../iPSCs/SQANTI3_QC_isoquant_*/*classification.txt"):
 	name = i.split("/")[-1].replace("_classification.txt","")
 	print("Empezando a procesar:",name)
 	cls = pd.read_csv(i,sep="\t")
