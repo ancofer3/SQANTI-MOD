@@ -4,6 +4,7 @@ import glob
 import os
 import gzip
 import argparse
+import sys
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 
@@ -136,27 +137,27 @@ def genome_to_tx(ref_pos: int, tx_info: dict) -> int:
                 return offset + (fin - 1 - ref_pos)
     return None
     
-def tablaMods(path, args):
+def tablaMods(args):
     ''' 
     We generate a tsv file with the CIGAR and Probs for each read in the bam 
     file. 
     '''
-    basename = os.path.basename(path)
-    nombre = basename.replace(args.bam_suffix, "") if args.bam_suffix in basename else basename.split(".")[0]
-    bed_path = os.path.join(args.bed_dir, f"{nombre}_filtered.bed")
-    gtf_path = os.path.join(args.isoquant_dir, nombre, nombre, f"{nombre}.extended_annotation.gtf")
-    assoc_path = os.path.join(args.isoquant_dir, nombre, nombre, f"{nombre}.transcript_model_reads.tsv.gz")
-    if not os.path.exists(gtf_path) or not os.path.exists(assoc_path):
-        return f"Error: Archivos de IsoQuant no encontrados para {nombre}"
+    for filepath in [args.bam, args.bed, args.gtf, args.assoc]:
+        if not os.path.exists(filepath):
+            print(f"Error: File not found -> {filepath}")
+            sys.exit(1)
+    print(f"Loading dependencies for {os.path.basename(args.bam)} ...")
+    conf_sites = cargaBed(args.bed)
+    read_tx = cargaRead_Transcrito(args.assoc)
+    tx_dict = cargaGTF(args.gtf)
     
-    conf_sites = cargaBed(bed_path)
-    read_tx = cargaRead_Transcrito(assoc_path)
-    tx_dict = cargaGTF(gtf_path)
-    print("El set conf_sites tiene esta pinta:", list(conf_sites)[0:5])
+    cpus = int(os.environ.get('SLURM_CPUS_PER_TASK', 4))
+    print(f"Processing BAM utilizing {cpus} threads...")
     
-    samfile = pysam.AlignmentFile(path, "rb", threads=6)
+    samfile = pysam.AlignmentFile(args.bam, "rb", threads=6)
     if not samfile.check_index():
-        raise ValueError
+        print("Error: The BAM file does not have an index (.bai). Aborting.")
+        sys.exit(1)
     filas_lecturas = []
     
     for read in samfile.fetch():
@@ -262,33 +263,29 @@ def tablaMods(path, args):
 
             filas_lecturas.append(fila)
     samfile.close()
+    # Guardar resultados
     df = pd.DataFrame(filas_lecturas)
-    os.makedirs(args.out_dir, exist_ok=True)
-    out_file = os.path.join(args.out_dir, f"{nombre}_transcripts_modCIGAR.tsv")
-    df.to_csv(out_file, sep="\t", index=None)
-    return f"{nombre} Completado con éxito. {len(df)} lecturas procesadas" 
+    
+    out_dir = os.path.dirname(args.out_tsv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+        
+    df.to_csv(args.out_tsv, sep="\t", index=None)
+    return f"Extraction completed. {len(df)} reads with modifications saved in {args.out_tsv}" 
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Extrae tags de modificaciones a coordenadas de transcrito.")
-    parser.add_argument('--bam_dir', required=True, help="Directorio con archivos BAM")
-    parser.add_argument('--bam_suffix', default="_primary.bam", help="Sufijo de los BAM a eliminar para el nombre")
-    parser.add_argument('--bed_dir', required=True, help="Directorio con archivos BED filtrados")
-    parser.add_argument('--isoquant_dir', required=True, help="Directorio base de IsoQuant")
-    parser.add_argument('--out_dir', required=True, help="Directorio de salida para los TSV")
-    parser.add_argument('--prob_lim', type=float, default=0.95, help="Probabilidad límite de la modificación")
+    parser = argparse.ArgumentParser(description="Extrae tags de modificaciones a coordenadas de transcrito (1 muestra).")
+    
+    # Reemplazamos todos los directorios por rutas de archivos específicas
+    parser.add_argument('--bam', required=True, help="Path to the BAM file")
+    parser.add_argument('--bed', required=True, help="Path to the filtered BED file")
+    parser.add_argument('--gtf', required=True, help="Path to the IsoQuant GTF annotation")
+    parser.add_argument('--assoc', required=True, help="Path to the TSV of reads to isoforms from IsoQuant")
+    parser.add_argument('--out_tsv', required=True, help="Path where the output TSV will be saved")
+    
+    parser.add_argument('--prob_lim', type=float, default=0.95, help="Minimum probability threshold for modifications (default: 0.95)")
+    
     args = parser.parse_args()
     
-    cpus_slurm = int(os.environ.get('SLURM_CPUS_PER_TASK', 1))
-    archivos_bam = glob.glob(os.path.join(args.bam_dir, f"*{args.bam_suffix}"))
-    print(f"Se han encontrado {len(archivos_bam)} archivos BAM.")
-    print(f"Ejecutando en PARALELO utilizando {cpus_slurm} CPUs...\n")
-    # Usamos partial para pasar los argumentos a la función tablaMods
-    func_paralela = partial(tablaMods, args=args)
-    # Lanzar un "Pool" de trabajadores. Procesará N archivos a la vez.
-    with ProcessPoolExecutor(max_workers=len(archivos_bam) if len(archivos_bam) <= cpus_slurm else cpus_slurm) as executor:
-        resultados = executor.map(func_paralela, archivos_bam)
-        # Imprime los avisos de finalización conforme van acabando
-        for res in resultados:
-            print(res)
-    print("\n¡Todos los archivos han sido procesados!")
+    tablaMods(args)

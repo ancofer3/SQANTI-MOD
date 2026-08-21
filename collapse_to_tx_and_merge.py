@@ -1,9 +1,9 @@
 import ast
 import pandas as pd
-import glob
 import numpy as np
 import os
 import argparse
+import sys
 
 '''OJO: Faltaria ver como incorporamos las probabilidades. Alomejor lo mejor es que ya desde el principio se de
 la prob límite que quieres usar para cada mod y en base a eso extraigamos antes solo las que pasen el filtro.
@@ -119,32 +119,41 @@ def collapsePositions(tsv, args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--tsv_dir', required=True, help="Directorio con los TSV de entrada")
-    parser.add_argument('--sqanti_dir', required=True, help="Directorio padre con los outputs de SQANTI3")
-    parser.add_argument('--out_dir', required=True, help="Directorio de salida final")
+    parser.add_argument('--tsv_in', required=True, help="Ruta al TSV con modificaciones de la muestra")
+    parser.add_argument('--sqanti_class', required=True, help="Ruta al classification.txt de SQANTI3 para la muestra")
+    parser.add_argument('--out_tsv', required=True, help="Ruta al archivo TSV de salida final")
+    
     parser.add_argument('--min_cov', type=int, default=20, help="Cobertura mínima por posición")
     parser.add_argument('--min_occ', type=float, default=0.2, help="Ocupancia mínima por posición")
     args = parser.parse_args()
-	
-    os.makedirs(args.out_dir, exist_ok=True)
-    patron_sqanti = os.path.join(args.sqanti_dir, "SQANTI3_QC_isoquant_*", "*classification.txt")
-    for i in glob.glob(patron_sqanti):
-        name = os.path.basename(i).replace("_classification.txt", "")
-        print("Empezando a procesar:", name)
+    
+    print(f"Empezando a procesar archivo: {args.tsv_in}")
+    
+    # Comprobar que los archivos de entrada existen
+    if not os.path.exists(args.tsv_in):
+        print(f"Error: input {args.tsv_in} not found")
+        sys.exit(1)
         
-        cls = pd.read_csv(i, sep="\t")
-        tsv_path = os.path.join(args.tsv_dir, f"{name}_transcripts_modCIGAR.tsv")
+    if not os.path.exists(args.sqanti_class):
+        print(f"Error: SQANTI classification file not found: {args.sqanti_class}")
+        sys.exit(1)
         
-        if not os.path.exists(tsv_path):
-            print(f"Aviso: No se encontró {tsv_path}, saltando...")
-            continue
-            
-        tsv = pd.read_csv(tsv_path, sep="\t")
-        tsv_colapsado = collapsePositions(tsv, args)
+    # Crear carpeta de destino si no existe
+    out_dir = os.path.dirname(args.out_tsv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
         
-        fusion = cls.merge(tsv_colapsado, how="left", left_on="isoform", right_on="transcript_id")
-        out_file = os.path.join(args.out_dir, f"{name}_classification_transcripts_mod.tsv")
-        fusion.to_csv(out_file, sep="\t", index=False)
-        
-        print("Mergeo terminado con: ", name)
-
+    # 1. Leer y colapsar el TSV de modificaciones
+    tsv = pd.read_csv(args.tsv_in, sep="\t")
+    tsv_colapsado = collapsePositions(tsv, args)
+    
+    # 2. Leer clasificación de SQANTI
+    cls = pd.read_csv(args.sqanti_class, sep="\t")
+    
+    # 3. Mergear
+    fusion = cls.merge(tsv_colapsado, how="left", left_on="isoform", right_on="transcript_id")
+    
+    # 4. Guardar archivo final
+    fusion.to_csv(args.out_tsv, sep="\t", index=False)
+    
+    print(f"Merging finished. Results stored in {args.out_tsv}")

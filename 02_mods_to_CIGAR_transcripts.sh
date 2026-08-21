@@ -12,9 +12,10 @@ module load anaconda
 conda activate jae_env
 
 python -u saca_tags_transcript_models.py \
-    --bam_dir "$BAM_DIR" \
-    --bam_suffix "$BAM_SUFFIX" \
-    --bed_dir "$BED_OUTDIR" \
-    --isoquant_dir "$ISOQUANT_DIR" \
-    --out_dir "$TSV_OUTDIR" \
+    --bed "$BED" \
+    --bam "$BAM" \
+    --gtf "$GTF" \
+    --assoc "$ASSOC" \
+    --out_tsv "$OUT_TSV" \
     --prob_lim "$PROB_LIM"
+

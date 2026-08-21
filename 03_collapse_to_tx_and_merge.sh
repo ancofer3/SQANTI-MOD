@@ -12,8 +12,8 @@ module load anaconda
 conda activate jae_env
 
 python -u collapse_to_tx_and_merge.py \
-    --tsv_dir "$TSV_OUTDIR" \
-    --sqanti_dir "$SQANTI_DIR" \
-    --out_dir "$CLASS_OUTDIR" \
+    --tsv_in "$OUT_TSV" \
+    --sqanti_class "$SQANTI_CLASS" \
+    --out_tsv "$CLASS_OUTDIR" \
     --min_cov "$MIN_TX_COV" \
     --min_occ "$MIN_TX_OCC"
