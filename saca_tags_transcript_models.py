@@ -3,6 +3,8 @@ import pandas as pd
 import glob
 import os
 import gzip
+import argparse
+from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 
 
@@ -134,17 +136,16 @@ def genome_to_tx(ref_pos: int, tx_info: dict) -> int:
                 return offset + (fin - 1 - ref_pos)
     return None
     
-def tablaMods(path):
+def tablaMods(path, args):
     ''' 
     We generate a tsv file with the CIGAR and Probs for each read in the bam 
     file. 
     '''
-    nombre = "_".join(os.path.basename(path).split(".")[0].split("_")[0:2])
-    
-    # Cargamos toda la información complementaria a los sams
-    bed_path = f"../iPSCs/data/beds/{nombre}_filtered.bed" 
-    gtf_path = f"../iPSCs/reconstruction/isoquant/{nombre}/{nombre}/{nombre}.extended_annotation.gtf"
-    assoc_path = f"../iPSCs/reconstruction/isoquant/{nombre}/{nombre}/{nombre}.transcript_model_reads.tsv.gz"
+    basename = os.path.basename(path)
+    nombre = basename.replace(args.bam_suffix, "") if args.bam_suffix in basename else basename.split(".")[0]
+    bed_path = os.path.join(args.bed_dir, f"{nombre}_filtered.bed")
+    gtf_path = os.path.join(args.isoquant_dir, nombre, nombre, f"{nombre}.extended_annotation.gtf")
+    assoc_path = os.path.join(args.isoquant_dir, nombre, nombre, f"{nombre}.transcript_model_reads.tsv.gz")
     if not os.path.exists(gtf_path) or not os.path.exists(assoc_path):
         return f"Error: Archivos de IsoQuant no encontrados para {nombre}"
     
@@ -211,7 +212,7 @@ def tablaMods(path):
                 valid_mods = []
                 # Vamos a pasar las coordenadas de prob list a coords a nivel de transcrito
                 for read_pos, prob in probs_list:
-                    if (prob/256) < PROB_LIM:
+                    if (prob/256) < args.prob_lim:
                         continue
                     
                     #Filtramos para asegurarnos de que está entre las posiciones de confianza
@@ -262,19 +263,31 @@ def tablaMods(path):
             filas_lecturas.append(fila)
     samfile.close()
     df = pd.DataFrame(filas_lecturas)
-    os.makedirs("tsvs_transcritos", exist_ok=True)
-    df.to_csv(f"tsvs_transcritos/{nombre}_transcripts_modCIGAR.tsv",sep="\t",index=None)
+    os.makedirs(args.out_dir, exist_ok=True)
+    out_file = os.path.join(args.out_dir, f"{nombre}_transcripts_modCIGAR.tsv")
+    df.to_csv(out_file, sep="\t", index=None)
     return f"{nombre} Completado con éxito. {len(df)} lecturas procesadas" 
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Extrae tags de modificaciones a coordenadas de transcrito.")
+    parser.add_argument('--bam_dir', required=True, help="Directorio con archivos BAM")
+    parser.add_argument('--bam_suffix', default="_primary.bam", help="Sufijo de los BAM a eliminar para el nombre")
+    parser.add_argument('--bed_dir', required=True, help="Directorio con archivos BED filtrados")
+    parser.add_argument('--isoquant_dir', required=True, help="Directorio base de IsoQuant")
+    parser.add_argument('--out_dir', required=True, help="Directorio de salida para los TSV")
+    parser.add_argument('--prob_lim', type=float, default=0.95, help="Probabilidad límite de la modificación")
+    args = parser.parse_args()
+    
     cpus_slurm = int(os.environ.get('SLURM_CPUS_PER_TASK', 1))
-    archivos_bam = glob.glob("../iPSCs/data/bams_primary/*primary.bam")
+    archivos_bam = glob.glob(os.path.join(args.bam_dir, f"*{args.bam_suffix}"))
     print(f"Se han encontrado {len(archivos_bam)} archivos BAM.")
     print(f"Ejecutando en PARALELO utilizando {cpus_slurm} CPUs...\n")
+    # Usamos partial para pasar los argumentos a la función tablaMods
+    func_paralela = partial(tablaMods, args=args)
     # Lanzar un "Pool" de trabajadores. Procesará N archivos a la vez.
     with ProcessPoolExecutor(max_workers=len(archivos_bam) if len(archivos_bam) <= cpus_slurm else cpus_slurm) as executor:
-        resultados = executor.map(tablaMods, archivos_bam)
+        resultados = executor.map(func_paralela, archivos_bam)
         # Imprime los avisos de finalización conforme van acabando
         for res in resultados:
             print(res)

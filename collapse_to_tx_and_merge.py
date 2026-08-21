@@ -2,6 +2,8 @@ import ast
 import pandas as pd
 import glob
 import numpy as np
+import os
+import argparse
 
 '''OJO: Faltaria ver como incorporamos las probabilidades. Alomejor lo mejor es que ya desde el principio se de
 la prob límite que quieres usar para cada mod y en base a eso extraigamos antes solo las que pasen el filtro.
@@ -54,7 +56,7 @@ def pos_to_CIGAR(positions, tx_length):
         
     return "".join(cigar_parts)
     
-def collapsePositions(tsv):
+def collapsePositions(tsv, args):
 	pos_cols = [col for col in tsv.columns if col.startswith("positions_")]
 	mod_types = [col.replace("positions_","") for col in pos_cols]
 	resultados_transcritos = []
@@ -90,9 +92,9 @@ def collapsePositions(tsv):
 					else:
 						pos_counts[pos] = 1
 			# Vamos a quitarnos todas las posiciones que no tengan suficiente cobertura
-			pos_filt = {pos: count for pos, count in pos_counts.items() if count >= FILTRO_cov}
+			pos_filt = {pos: count for pos, count in pos_counts.items() if count >= args.min_cov}
 			# Tambien nos quitamos las que no cumplan con el filtro de ocupancia
-			pos_filt = {pos: count for pos, count in pos_filt.items() if count / np.sum((starts <= pos) & (ends >= pos)) >= FILTRO_occ}
+			pos_filt = {pos: count for pos, count in pos_filt.items() if count / np.sum((starts <= pos) & (ends >= pos)) >= args.min_occ}
 			sorted_pos = sorted(pos_filt.keys())
 			
 			local_coverages = []
@@ -115,12 +117,34 @@ def collapsePositions(tsv):
 	df_transcrito = pd.DataFrame(resultados_transcritos)
 	return df_transcrito
 
-for i in glob.glob("../iPSCs/SQANTI3_QC_isoquant_*/*classification.txt"):
-	name = i.split("/")[-1].replace("_classification.txt","")
-	print("Empezando a procesar:",name)
-	cls = pd.read_csv(i,sep="\t")
-	tsv = pd.read_csv(f"tsvs_transcritos/{name}_transcripts_modCIGAR.tsv",sep="\t")
-	tsv_colapsado = collapsePositions(tsv)
-	fusion = cls.merge(tsv_colapsado,how="left",left_on="isoform",right_on="transcript_id")
-	fusion.to_csv(f"data/classifications_mod/{name}_classification_transcripts_mod.tsv", sep="\t", index=False)
-	print("Mergeo terminado con: ",name)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--tsv_dir', required=True, help="Directorio con los TSV de entrada")
+    parser.add_argument('--sqanti_dir', required=True, help="Directorio padre con los outputs de SQANTI3")
+    parser.add_argument('--out_dir', required=True, help="Directorio de salida final")
+    parser.add_argument('--min_cov', type=int, default=20, help="Cobertura mínima por posición")
+    parser.add_argument('--min_occ', type=float, default=0.2, help="Ocupancia mínima por posición")
+    args = parser.parse_args()
+	
+    os.makedirs(args.out_dir, exist_ok=True)
+    patron_sqanti = os.path.join(args.sqanti_dir, "SQANTI3_QC_isoquant_*", "*classification.txt")
+    for i in glob.glob(patron_sqanti):
+        name = os.path.basename(i).replace("_classification.txt", "")
+        print("Empezando a procesar:", name)
+        
+        cls = pd.read_csv(i, sep="\t")
+        tsv_path = os.path.join(args.tsv_dir, f"{name}_transcripts_modCIGAR.tsv")
+        
+        if not os.path.exists(tsv_path):
+            print(f"Aviso: No se encontró {tsv_path}, saltando...")
+            continue
+            
+        tsv = pd.read_csv(tsv_path, sep="\t")
+        tsv_colapsado = collapsePositions(tsv, args)
+        
+        fusion = cls.merge(tsv_colapsado, how="left", left_on="isoform", right_on="transcript_id")
+        out_file = os.path.join(args.out_dir, f"{name}_classification_transcripts_mod.tsv")
+        fusion.to_csv(out_file, sep="\t", index=False)
+        
+        print("Mergeo terminado con: ", name)
+

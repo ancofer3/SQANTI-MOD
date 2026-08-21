@@ -6,17 +6,16 @@
 #SBATCH --error=logs/bedmethyl_%j.err
 #SBATCH --time=04:00:00
 #SBATCH --qos=short
+source config.sh
+mkdir -p $beds_path "BED_OUTDIR" "LOG_DIR"
 
-bams_path="../iPSCs/data/bams_primary/*primary.bam"
-beds_path="data/beds"
-mkdir -p $beds_path
-for bam in $bams_path; do
-	name=$(basename "$bam" _primary.bam)
-	../iPSCs/dist_modkit_v0.6.4_cd85862/modkit pileup $bam \
-		data/beds/${name}.bed \
-		--modified-bases m5C m6A 2OmeC pseU 2OmeU inosine 2OmeA \
-		--reference ../genomes/hg38/hg38.fa \
-		--log logs/pileup.txt
+for bam in "$BAM_DIR"/*"$BAM_SUFFIX"; do
+	name=$(basename "$bam" "$BAM_SUFFIX")
+	"$MODKIT_BIN" pileup $bam \
+		"$BED_OUTDIR"/${name}.bed \
+		--modified-bases $MODS\
+		--reference "$REF_GENOME"\
+		--log "$LOG_DIR"/pileup_${name}.txt
 	# Conservamos sitios con cobertura minima genómica >= 5 para para quitar ruido
-	awk '($10 >= 5) || /^#/' data/beds/${name}.bed > data/beds/${name}_filtered.bed
+	awk -v min_cov="$MIN_GENOMIC_COV" '($10 >= min_cov) || /^#/' "$BED_OUTDIR/${name}.bed" > "$BED_OUTDIR/${name}_filtered.bed"
 done
