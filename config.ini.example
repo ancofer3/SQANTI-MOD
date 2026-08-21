@@ -1,0 +1,15 @@
+[DEFAULT]
+BAM = /path/to/sample.bam
+GTF = /path/to/sample.gtf
+TSV = /path/to/sample_transcripts_modCIGAR.tsv
+CLASSIFICATION = /path/to/sample_classification.txt
+REFERENCE = /path/to/genome.fa
+MODKIT = /path/to/modkit
+ISOQUANT_DIR = /path/to/isoquant
+READ_TRANSCRIPT_ASSOCIATION = /path/to/sample.transcript_model_reads.tsv.gz
+OUTPUT_DIR = /path/to/output
+MODS = m5C m6A 2OmeC pseU 2OmeU inosine 2OmeA
+MIN_GENOMIC_COV = 5
+PROB_LIM = 0.95
+MIN_TX_COV = 20
+MIN_TX_OCC = 0.2
