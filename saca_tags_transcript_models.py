@@ -7,7 +7,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 
 # A futuro esto deberíamos cambiarlo desde el principio o dar tu un dic
-PROB_LIM=0.5
+PROB_LIM=0.95
 cod_mod_largo = {"m":"m5C","a":"m6A", "19228":"2OmeC", "17802":"pseU","19227":"2OmeU", "17596":"inosine" , "69426":"2OmeA"}
 cod_mod_1 = {"m":"m","a":"a", "19228":"C", "17802":"P","19227":"U", "17596":"I" , "69426":"A"}
 
