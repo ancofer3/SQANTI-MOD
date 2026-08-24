@@ -85,6 +85,7 @@ def build_filtered_bed(
                 continue
             if cov >= min_genomic_cov:
                 dst.write(line)
+    print("BED generado y filtrado")
 
     return filtered_path
 
@@ -119,6 +120,7 @@ def run_mods_to_cigar(
         str(prob_lim),
     ]
     run(cmd)
+    print("Tabla con modificaciones por read generada")
     return out_tsv
 
 
@@ -131,7 +133,6 @@ def run_collapse_to_tx_and_merge(
     min_occ: float,
 ) -> Path:
     out_tsv = f"{sample}.mod_classification.txt"
-    sqanti_root = out_dir / "sqanti"
 
     cmd = [
         sys.executable,
@@ -147,6 +148,8 @@ def run_collapse_to_tx_and_merge(
         "--min_occ",
         str(min_occ),
     ]
+    run(cmd)
+    print("Classsification enriched with isoform-level modification data:", out_tsv)
     return out_tsv
 
 
