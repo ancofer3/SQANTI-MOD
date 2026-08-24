@@ -156,4 +156,4 @@ if __name__ == "__main__":
     # 4. Guardar archivo final
     fusion.to_csv(f"{out_dir}/{args.out_tsv}", sep="\t", index=False)
     
-    print(f"Merging finished. Results stored in {args.out_tsv}")
+    print(f"Merging finished. Results stored in {out_dir}/{args.out_tsv}")
