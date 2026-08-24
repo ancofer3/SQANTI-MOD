@@ -132,7 +132,7 @@ def run_collapse_to_tx_and_merge(
     min_cov: int,
     min_occ: float,
 ) -> Path:
-    out_tsv = f"{sample}.mod_classification.txt"
+    out_tsv = f"{out_dir}/{sample}.mod_classification.txt"
 
     cmd = [
         sys.executable,
