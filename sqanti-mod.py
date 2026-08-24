@@ -197,7 +197,6 @@ def main() -> int:
         args.output_dir = Path(f"output_{args.prefix}")
         
     args.output_dir.mkdir(parents=True, exist_ok=True)
-
     filtered_bed = build_filtered_bed(
         bam_path=args.bam,
         reference_path=args.reference,
@@ -207,7 +206,6 @@ def main() -> int:
         mods=args.mods,
         min_genomic_cov=args.min_genomic_cov,
     )
-
     tsv_dir = run_mods_to_cigar(
         bam_path=args.bam,
         gtf_path=args.gtf,
