@@ -207,7 +207,6 @@ def main() -> int:
         sample=args.prefix,
         out_dir=args.output_dir,
         prob_lim=args.prob_lim,
-        read_assoc_path=args.read_transcript_association,
     )
     
     merge_dir = run_collapse_to_tx_and_merge(

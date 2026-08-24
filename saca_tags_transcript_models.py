@@ -280,7 +280,7 @@ if __name__ == '__main__':
     # Reemplazamos todos los directorios por rutas de archivos específicas
     parser.add_argument('--bam', required=True, help="Path to the BAM file")
     parser.add_argument('--bed', required=True, help="Path to the filtered BED file")
-    parser.add_argument('--gtf', required=True, help="Path to the IsoQuant GTF annotation")
+    parser.add_argument('--gtf', required=True, help="Path to the GTF annotation")
     parser.add_argument('--assoc', required=True, help="Path to the TSV of reads to isoforms from IsoQuant")
     parser.add_argument('--out_tsv', required=True, help="Path where the output TSV will be saved")
     
