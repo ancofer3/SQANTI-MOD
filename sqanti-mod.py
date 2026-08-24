@@ -188,7 +188,7 @@ def main() -> int:
             raise FileNotFoundError(f"{name} file not found: {filepath}")
         
     if args.output_dir == None:
-        args.output_dir = f"output_{args.prefix}"
+        args.output_dir = Path(f"output_{args.prefix}")
         
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
