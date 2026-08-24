@@ -215,7 +215,7 @@ def main() -> int:
     merge_dir = run_collapse_to_tx_and_merge(
         tsv_path=tsv_dir,
         classification_path=args.classification,
-        out_dir=args.out_dir,
+        out_dir=args.output_dir,
         sample=args.prefix,
         min_cov=args.min_tx_cov,
         min_occ=args.min_tx_occ,
