@@ -160,7 +160,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tsv", type=Path, required=True, help="Read_to_transcript TSV/GZ association file.")
     parser.add_argument("--prefix", type=str,required=True,help="Prefix for final output files")
     # Archivos / directorios opcionales
-    parser.add_argument("--output-dir", type=Path, default=ROOT / "output", help="Directory for all outputs.")
+    parser.add_argument("--output-dir", type=Path, default=None, help="Directory for all outputs.")
     parser.add_argument("--modkit", type=str, default="modkit", help="Path to the modkit binary.")
     
     # Parámetros numéricos / listas con defaults establecidos
@@ -186,7 +186,10 @@ def main() -> int:
     ]:
         if not filepath.exists():
             raise FileNotFoundError(f"{name} file not found: {filepath}")
-
+        
+    if args.output_dir == None:
+        args.output_dir = f"output_{args.prefix}"
+        
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     filtered_bed = build_filtered_bed(
