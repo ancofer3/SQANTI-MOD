@@ -23,6 +23,7 @@ import argparse
 import shutil
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -48,7 +49,7 @@ def build_filtered_bed(
     # Creamos el directorio output si no está ya creado
     bed_dir = out_dir 
     bed_dir.mkdir(parents=True, exist_ok=True)
-
+    cpus = int(os.environ.get('SLURM_CPUS_PER_TASK', 4))
     bed_path = bed_dir / f"{sample}.bed"
     filtered_path = bed_dir / f"{sample}_filtered.bed"
     log_path = out_dir / "logs" / f"pileup_{sample}.txt"
@@ -65,6 +66,8 @@ def build_filtered_bed(
         str(reference_path),
         "--log",
         str(log_path),
+        "-t",
+        str(cpus)
     ]
     run(cmd)
     #Filtramos al mínimo inputeado
