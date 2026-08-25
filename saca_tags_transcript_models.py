@@ -178,7 +178,7 @@ def tablaMods(args):
     filas_lecturas = []
     
     for read in samfile.fetch():
-        if read.is_secondary or read.is_supplementary or read.is_ummapped:
+        if read.is_secondary or read.is_supplementary or read.is_unmapped:
             continue
         
         read_id = read.query_name
@@ -307,4 +307,4 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    tablaMods(args)
+    print(tablaMods(args))
