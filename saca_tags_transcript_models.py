@@ -7,6 +7,7 @@ import argparse
 import sys
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
+from bisect import bisect_right
 
 
 # A futuro esto deberíamos cambiarlo desde el principio o dar tu un dic
@@ -173,19 +174,32 @@ def tablaMods(args):
         tx_length = tx_info["total_length"]
         
         length = read.query_length
-        obj_aligned_pairs = read.get_aligned_pairs(matches_only=True)
+        
+        query_ref = dict(read.get_aligned_pairs(matches_only=True))
+        if not query_ref:
+            continue
+        aligned_refs = list(query_ref.values())
         # Para sacar donde empieza y acaba la read en el transcrito
-        # Obtenemos pares de alineamiento (base_read, base_genoma)
-        aligned_pairs = [r for q, r in obj_aligned_pairs if q is not None and r is not None]
+        # Solo tenemos que quedarnos con el comienzo y el final
+        tx_start, tx_end = None, None
+        for r in aligned_refs:
+            pos = genome_to_tx(r, tx_info)
+            # Si la posicion no está fuera de los exones
+            if pos is not None:
+                tx_start = pos
+                break
+        for r in reversed(aligned_refs):
+            pos = genome_to_tx(r, tx_info)
+            if pos is not None:
+                tx_end = pos
+                break
+            
+        if tx_start is None or tx_end is None:
+            continue
+        
+        if tx_start > tx_end:
+            tx_start, tx_end = tx_end, tx_start
 
-        # Convertimos las coordenadas genómicas a coordenadas de transcrito
-        tx_positions = [genome_to_tx(r, tx_info) for r in aligned_pairs]
-
-        # Limpiamos valores nulos (posiciones fuera de los exones definidos)
-        tx_positions = [p for p in tx_positions if p is not None]
-
-        # Extraemos el mínimo y el máximo
-        tx_start, tx_end = min(tx_positions), max(tx_positions)
         # Nuestra fila para el TSV final
         fila = {"isoform": read_id, 
                 "transcript_id":tx_id,
@@ -200,8 +214,6 @@ def tablaMods(args):
             continue
         last_pos = -1
         if mods:
-            # Hacemos un dic de posicion en la read a genomica
-            query_ref = {q:r for q,r in obj_aligned_pairs if q is not None and r is not None}
             chrom = read.reference_name
             strand = "-" if read.is_reverse else "+"
             # Para cada modificacion (canonical base, strand, modification) con su lista de [ (pos,qual), …] 
@@ -285,7 +297,7 @@ if __name__ == '__main__':
     parser.add_argument('--gtf', required=True, help="Path to the GTF annotation")
     parser.add_argument('--assoc', required=True, help="Path to the TSV of reads to isoforms from IsoQuant")
     parser.add_argument('--out_tsv', required=True, help="Path where the output TSV will be saved")
-    parser.add_argument('--mods', type=list, required=True, help="Modifications to include")
+    parser.add_argument('--mods', nargs="+", required=True, help="Modifications to include")
     parser.add_argument('--prob_lim', type=float, default=0.95, help="Minimum probability threshold for modifications (default: 0.95)")
     
     args = parser.parse_args()
