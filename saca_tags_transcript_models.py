@@ -143,6 +143,7 @@ def tablaMods(args):
     We generate a tsv file with the CIGAR and Probs for each read in the bam 
     file. 
     '''
+    not_mods = []
     for filepath in [args.bam, args.bed, args.gtf, args.assoc]:
         if not os.path.exists(filepath):
             print(f"Error: File not found -> {filepath}")
@@ -221,6 +222,7 @@ def tablaMods(args):
                 base_canon = tupla[0] 
                 mod = str(tupla[2])
                 if mod not in args.mods:
+                    not_mods.append(mod)
                     continue
                 # Para cuando el id de la mod es un codigo CHEBI
                 mod_str = "M"
@@ -285,7 +287,7 @@ def tablaMods(args):
         os.makedirs(out_dir, exist_ok=True)
         
     df.to_csv(args.out_tsv, sep="\t", index=None)
-    return f"Extraction completed. {len(df)} reads with modifications saved in {args.out_tsv}" 
+    return f"Extraction completed. {len(df)} reads with modifications saved in {args.out_tsv}. Mods no cogidas: {not_mods}" 
 
 
 if __name__ == '__main__':
