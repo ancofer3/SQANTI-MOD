@@ -54,7 +54,6 @@ def build_filtered_bed(
     filtered_path = bed_dir / f"{sample}_filtered.bed"
     log_path = out_dir / "logs" / f"pileup_{sample}.txt"
     log_path.parent.mkdir(parents=True, exist_ok=True)
-
     cmd = [
         modkit_bin,
         "pileup",
@@ -102,10 +101,12 @@ def run_mods_to_cigar(
     mods: list
 ) -> Path:
     out_tsv = f"{out_dir}/{sample}.tsv"
-
+    prof_out = f"{out_dir}/{sample}.sacatags.prof"
     cmd = [
         sys.executable,
         "-u",
+        "-m", "cProfile",
+        "-o", str(prof_out),
         str(ROOT / "saca_tags_transcript_models.py"),
         "--bed",
         str(filtered_bed),
@@ -136,9 +137,11 @@ def run_collapse_to_tx_and_merge(
     min_occ: float,
 ) -> Path:
     out_tsv = f"{out_dir}/{sample}.mod_classification.txt"
-
+    prof_out = f"{out_dir}/{sample}.collapse.prof"
     cmd = [
         sys.executable,
+        "-m", "cProfile",
+        "-o", str(prof_out),
         str(ROOT / "collapse_to_tx_and_merge.py"),
         "--tsv_in",
         str(tsv_path),
