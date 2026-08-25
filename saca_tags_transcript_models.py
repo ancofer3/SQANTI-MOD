@@ -8,12 +8,13 @@ import sys
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 from bisect import bisect_right
-
+from collections import defaultdict
 
 # A futuro esto deberíamos cambiarlo desde el principio o dar tu un dic
 PROB_LIM=0.95
 cod_mod_largo = {"m":"m5C","a":"m6A", "19228":"2OmeC", "17802":"pseU","19227":"2OmeU", "17596":"inosine" , "69426":"2OmeA"}
 cod_mod_1 = {"m":"m","a":"a", "19228":"C", "17802":"P","19227":"U", "17596":"I" , "69426":"A"}
+ASCII_MAP = {p: chr(33 + round((p * 93) / 256)) for p in range(257)}
 
 def prob_ASCII(prob:float) -> str:
     '''
@@ -41,6 +42,20 @@ def cargaBed(path: str) -> set:
             cols = line.strip().split("\t")
             # Añadimos una tupla (chrom,start_position,strand)
             conf_sites.add((cols[0],int(cols[1]),cols[5]))
+    return conf_sites
+
+def cargaBed(path: str) -> dict:
+    '''
+    We load the bed file with filtered sites and return a dictionary 
+    keyed by (chrom, strand) containing a set of positions.
+    '''
+    conf_sites = defaultdict(set)
+    with open(path, "r") as f:
+        for line in f:
+            if line.startswith("#") or not line.strip():
+                continue
+            cols = line.strip().split("\t")
+            conf_sites[(cols[0], cols[5])].add(int(cols[1]))
     return conf_sites
 
 def cargaRead_Transcrito(path:str) -> dict:
@@ -163,7 +178,7 @@ def tablaMods(args):
     filas_lecturas = []
     
     for read in samfile.fetch():
-        if read.is_secondary or read.is_supplementary or read.query_sequence is None:
+        if read.is_secondary or read.is_supplementary or read.is_ummapped:
             continue
         
         read_id = read.query_name
@@ -175,26 +190,10 @@ def tablaMods(args):
         tx_length = tx_info["total_length"]
         
         length = read.query_length
+        blocks = read.get_blocks()
+        tx_start = genome_to_tx(blocks[0][0], tx_info)
+        tx_end = genome_to_tx(blocks[-1][1] - 1, tx_info)
         
-        query_ref = dict(read.get_aligned_pairs(matches_only=True))
-        if not query_ref:
-            continue
-        aligned_refs = list(query_ref.values())
-        # Para sacar donde empieza y acaba la read en el transcrito
-        # Solo tenemos que quedarnos con el comienzo y el final
-        tx_start, tx_end = None, None
-        for r in aligned_refs:
-            pos = genome_to_tx(r, tx_info)
-            # Si la posicion no está fuera de los exones
-            if pos is not None:
-                tx_start = pos
-                break
-        for r in reversed(aligned_refs):
-            pos = genome_to_tx(r, tx_info)
-            if pos is not None:
-                tx_end = pos
-                break
-            
         if tx_start is None or tx_end is None:
             continue
         
@@ -215,9 +214,13 @@ def tablaMods(args):
             continue
         last_pos = -1
         if mods:
+            query_ref = dict(read.get_aligned_pairs(matches_only=True))
             chrom = read.reference_name
             strand = "-" if read.is_reverse else "+"
+            valid_sites = conf_sites.get((chrom, strand), set())
+            prob_threshold = args.prob_lim * 256
             # Para cada modificacion (canonical base, strand, modification) con su lista de [ (pos,qual), …] 
+            
             for tupla, probs_list in mods.items():
                 base_canon = tupla[0] 
                 mod = str(tupla[2])
@@ -229,12 +232,12 @@ def tablaMods(args):
                 valid_mods = []
                 # Vamos a pasar las coordenadas de prob list a coords a nivel de transcrito
                 for read_pos, prob in probs_list:
-                    if (prob/256) < args.prob_lim:
+                    if prob < prob_threshold:
                         continue
                     
                     #Filtramos para asegurarnos de que está entre las posiciones de confianza
                     ref_pos = query_ref.get(read_pos)
-                    if ref_pos is None or (chrom, ref_pos, strand) not in conf_sites:
+                    if ref_pos is None or ref_pos not in valid_sites:
                         continue
                     # Sacamos la posicion a  nivel de transcrito
                     tx_pos = genome_to_tx(ref_pos,tx_info)
