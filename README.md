@@ -1,11 +1,11 @@
 # SQANTI-MOD
 
-Pipeline para detectar modificaciones de bases en lecturas long-read y resumirlas a nivel de transcrito, integrando el resultado con la clasificación de SQANTI3.
+Pipeline for the integration of long-reads modification calls in uBAM files into the SQANTI classification file of a reconstructed transcriptome.
 
-El flujo consta de tres etapas:
+It consists of three basic steps:
 
-1. `modkit pileup`: genera un BED de sitios modificados y conserva los sitios con cobertura genómica suficiente.
-2. `saca_tags_transcript_models.py`: proyecta las modificaciones desde las coordenadas genómicas a las coordenadas del transcrito usando el BAM, el GTF y la asociación lectura-transcrito de IsoQuant.
+1. `Genomic coverage filtering`: We use modkit, ONT's tool for working with modified bases, to generate a BED file of the modified sites and we filter out calls with low genomic coverage based on a specified threshold(with default parameters we filter out sites with < 5 reads) 
+2. `Read to transcript projection`: proyecta las modificaciones desde las coordenadas genómicas a las coordenadas del transcrito usando el BAM, el GTF y la asociación lectura-transcrito de IsoQuant.
 3. `collapse_to_tx_and_merge.py`: agrupa las posiciones modificadas por transcrito, aplica filtros de cobertura y ocupancia, y añade la información a `classification.txt` de SQANTI3.
 
 ## Requisitos
