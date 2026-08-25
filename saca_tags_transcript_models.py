@@ -208,6 +208,8 @@ def tablaMods(args):
             for tupla, probs_list in mods.items():
                 base_canon = tupla[0] 
                 mod = str(tupla[2])
+                if mod not in args.mods:
+                    continue
                 # Para cuando el id de la mod es un codigo CHEBI
                 mod_str = "M"
                 valid_mods = []
@@ -283,7 +285,7 @@ if __name__ == '__main__':
     parser.add_argument('--gtf', required=True, help="Path to the GTF annotation")
     parser.add_argument('--assoc', required=True, help="Path to the TSV of reads to isoforms from IsoQuant")
     parser.add_argument('--out_tsv', required=True, help="Path where the output TSV will be saved")
-    
+    parser.add_argument('--mods', type=list, required=True, help="Modifications to include")
     parser.add_argument('--prob_lim', type=float, default=0.95, help="Minimum probability threshold for modifications (default: 0.95)")
     
     args = parser.parse_args()

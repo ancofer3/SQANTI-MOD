@@ -99,6 +99,7 @@ def run_mods_to_cigar(
     sample: Path,
     out_dir:Path,
     prob_lim: float,
+    mods: list
 ) -> Path:
     out_tsv = f"{out_dir}/{sample}.tsv"
 
@@ -118,6 +119,8 @@ def run_mods_to_cigar(
         str(out_tsv),
         "--prob_lim",
         str(prob_lim),
+        "--mods",
+        str(mods)
     ]
     run(cmd)
     print("Tabla con modificaciones por read generada")
@@ -214,6 +217,7 @@ def main() -> int:
         sample=args.prefix,
         out_dir=args.output_dir,
         prob_lim=args.prob_lim,
+        mods = args.mods
     )
     
     merge_dir = run_collapse_to_tx_and_merge(
