@@ -154,6 +154,6 @@ if __name__ == "__main__":
     fusion = cls.merge(tsv_colapsado, how="left", left_on="isoform", right_on="transcript_id")
     
     # 4. Guardar archivo final
-    fusion.to_csv(f"{out_dir}/{args.out_tsv}", sep="\t", index=False)
+    fusion.to_csv(f"{args.out_tsv}", sep="\t", index=False)
     
     print(f"Merging finished. Results stored in {out_dir}/{args.out_tsv}")
