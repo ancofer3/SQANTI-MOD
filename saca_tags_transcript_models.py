@@ -13,6 +13,7 @@ from collections import defaultdict
 # A futuro esto deberíamos cambiarlo desde el principio o dar tu un dic
 PROB_LIM=0.95
 cod_mod_largo = {"m":"m5C","a":"m6A", "19228":"2OmeC", "17802":"pseU","19227":"2OmeU", "17596":"inosine" , "69426":"2OmeA"}
+nombre_a_codigo = {v: k for k, v in cod_mod_largo.items()}
 cod_mod_1 = {"m":"m","a":"a", "19228":"C", "17802":"P","19227":"U", "17596":"I" , "69426":"A"}
 ASCII_MAP = {p: chr(33 + round((p * 93) / 256)) for p in range(257)}
 
@@ -158,7 +159,8 @@ def tablaMods(args):
     We generate a tsv file with the CIGAR and Probs for each read in the bam 
     file. 
     '''
-    not_mods = []
+    mods_codigos = {nombre_a_codigo[m] for m in args.mods if m in nombre_a_codigo}
+    not_mods = set()
     for filepath in [args.bam, args.bed, args.gtf, args.assoc]:
         if not os.path.exists(filepath):
             print(f"Error: File not found -> {filepath}")
@@ -224,8 +226,8 @@ def tablaMods(args):
             for tupla, probs_list in mods.items():
                 base_canon = tupla[0] 
                 mod = str(tupla[2])
-                if mod not in args.mods:
-                    not_mods.append(mod)
+                if mod not in mods_codigos:
+                    not_mods.add(mod)
                     continue
                 # Para cuando el id de la mod es un codigo CHEBI
                 mod_str = "M"
@@ -290,7 +292,7 @@ def tablaMods(args):
         os.makedirs(out_dir, exist_ok=True)
         
     df.to_csv(args.out_tsv, sep="\t", index=None)
-    return f"Extraction completed. {len(df)} reads with modifications saved in {args.out_tsv}. Mods no cogidas: {not_mods}" 
+    return f"Extraction completed. {len(df)} reads with modifications saved in {args.out_tsv}. Mods no cogidas: {sorted(not_mods)}" 
 
 
 if __name__ == '__main__':
