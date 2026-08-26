@@ -191,16 +191,20 @@ def tablaMods(args):
         tx_info = tx_dict[tx_id]
         tx_length = tx_info["total_length"]
         
-        length = read.query_length
-        blocks = read.get_blocks()
-        tx_start = genome_to_tx(blocks[0][0], tx_info)
-        tx_end = genome_to_tx(blocks[-1][1] - 1, tx_info)
-        
-        if tx_start is None or tx_end is None:
+        aligned_pairs = read.get_aligned_pairs(matches_only=True)
+        aligned_tx_positions = [
+            genome_to_tx(ref_pos, tx_info)
+            for _, ref_pos in aligned_pairs
+        ]
+        aligned_tx_positions = [
+            tx_pos for tx_pos in aligned_tx_positions if tx_pos is not None
+        ]
+
+        if not aligned_tx_positions:
             continue
-        
-        if tx_start > tx_end:
-            tx_start, tx_end = tx_end, tx_start
+
+        tx_start = min(aligned_tx_positions)
+        tx_end = max(aligned_tx_positions)
 
         # Nuestra fila para el TSV final
         fila = {"isoform": read_id, 
