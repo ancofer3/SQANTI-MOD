@@ -121,7 +121,7 @@ def run_mods_to_cigar(
         "--prob_lim",
         str(prob_lim),
         "--mods",
-        str(mods)
+        *mods
     ]
     run(cmd)
     print("Tabla con modificaciones por read generada")
