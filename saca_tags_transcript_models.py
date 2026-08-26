@@ -243,6 +243,17 @@ def tablaMods(args):
                         continue
                     # Sacamos la posicion a  nivel de transcrito
                     tx_pos = genome_to_tx(ref_pos,tx_info)
+                    if tx_pos is not None and not (tx_start <= tx_pos <= tx_end):
+                        print(
+                            "INCONSISTENCIA:",
+                            read_id,
+                            tx_id,
+                            "tx_pos=", tx_pos,
+                            "tx_start=", tx_start,
+                            "tx_end=", tx_end,
+                            "ref_pos=", ref_pos,
+                            "read_pos=", read_pos,
+                        )
                     if tx_pos is not None:
                         valid_mods.append((tx_pos, prob))
                 

@@ -157,3 +157,4 @@ if __name__ == "__main__":
     fusion.to_csv(f"{args.out_tsv}", sep="\t", index=False)
     
     print(f"Merging finished. Results stored in {out_dir}/{args.out_tsv}")
+
