@@ -102,6 +102,8 @@ def cargaGTF(gtf_path: str) -> dict:
             # Col 6: Strand
             # Col 8: gene_id "ENSGXXX"; transcript_id "ENSTXXX; exon_number "X"; exon_id "ENSEXXX"
             cols = line.strip().split("\t")
+            if len(cols) < 9 or cols[2] != "exon":
+                continue
             chrom = cols[0]
             # Pasamos a 0 based con pos fin no incluida
             ini = int(cols[3]) - 1
@@ -325,3 +327,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     print(tablaMods(args))
+    
