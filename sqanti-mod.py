@@ -47,6 +47,7 @@ def build_filtered_bed(
     min_genomic_cov: int,
 ) -> Path:
     # Creamos el directorio output si no está ya creado
+    print("Starting modkit bed generation and filtering")
     bed_dir = out_dir 
     bed_dir.mkdir(parents=True, exist_ok=True)
     cpus = int(os.environ.get('SLURM_CPUS_PER_TASK', 4))
@@ -100,6 +101,7 @@ def run_mods_to_cigar(
     prob_lim: float,
     mods: list
 ) -> Path:
+    print("Starting read to transcript projection")
     out_tsv = f"{out_dir}/{sample}.tsv"
     prof_out = f"{out_dir}/{sample}.sacatags.prof"
     cmd = [
@@ -136,6 +138,7 @@ def run_collapse_to_tx_and_merge(
     min_cov: int,
     min_occ: float,
 ) -> Path:
+    print("Starting transcript-level collapse and classification file merge.")
     out_tsv = f"{out_dir}/{sample}.mod_classification.txt"
     prof_out = f"{out_dir}/{sample}.collapse.prof"
     cmd = [

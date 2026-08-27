@@ -110,9 +110,10 @@ def collapsePositions(tsv, args):
 				occupancies.append(occ)
 			
 			# Y lo añadimos
-			fila_tx[f"Positions_{mod}"] = sorted_pos
-			fila_tx[f"Coverage_{mod}"] = local_coverages
-			fila_tx[f"Occupancy_{mod}"] = occupancies
+			fila_tx[f"Positions_{mod}"] = ";".join(sorted_pos)
+			fila_tx[f"Coverage_{mod}"] = ";".join(local_coverages)
+			fila_tx[f"Occupancy_{mod}"] = ";".join(occupancies)
+            
 		resultados_transcritos.append(fila_tx)
 	df_transcrito = pd.DataFrame(resultados_transcritos)
 	return df_transcrito
