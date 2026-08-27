@@ -107,8 +107,8 @@ def run_mods_to_cigar(
     cmd = [
         sys.executable,
         "-u",
-        "-m", "cProfile",
-        "-o", str(prof_out),
+        #"-m", "cProfile",
+        #"-o", str(prof_out),
         str(ROOT / "saca_tags_transcript_models.py"),
         "--bed",
         str(filtered_bed),
