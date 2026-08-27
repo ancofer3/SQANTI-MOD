@@ -139,7 +139,7 @@ def run_collapse_to_tx_and_merge(
     min_occ: float,
 ) -> Path:
     print("Starting transcript-level collapse and classification file merge.")
-    out_tsv = f"{out_dir}/{sample}.mod_classification.txt"
+    out_tsv = f"{out_dir}/{sample}_mod_classification.txt"
     prof_out = f"{out_dir}/{sample}.collapse.prof"
     cmd = [
         sys.executable,

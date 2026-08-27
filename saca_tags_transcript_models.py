@@ -29,22 +29,6 @@ def prob_ASCII(prob:float) -> str:
         raise ValueError
     return ascii_code
 
-def cargaBed(path: str) -> set:
-    '''
-    We load the bed file with filtered sites and return a set of tuples 
-    (chrom, start_position, strand)
-    '''
-    conf_sites = set()
-    with open(path, "r") as f:
-        for line in f:
-            # Si la linea es commentario o está vacia
-            if line.startswith("#") or not line.strip():
-                continue
-            cols = line.strip().split("\t")
-            # Añadimos una tupla (chrom,start_position,strand)
-            conf_sites.add((cols[0],int(cols[1]),cols[5]))
-    return conf_sites
-
 def cargaBed(path: str) -> dict:
     '''
     We load the bed file with filtered sites and return a dictionary 
@@ -155,33 +139,18 @@ def genome_to_tx(ref_pos: int, tx_info: dict) -> int:
                 # -1 porque la posicion fin no es inclusive
                 return offset + (fin - 1 - ref_pos)
     return None
-    
-def tablaMods(args):
-    ''' 
-    We generate a tsv file with the CIGAR and Probs for each read in the bam 
-    file. 
-    '''
-    mods_codigos = {nombre_a_codigo[m] for m in args.mods if m in nombre_a_codigo}
+
+def procesarContig(chrom,args,conf_sites,read_tx,tx_dict,mods_codigos):
+    filas_lecturas = []
     not_mods = set()
-    for filepath in [args.bam, args.bed, args.gtf, args.assoc]:
-        if not os.path.exists(filepath):
-            print(f"Error: File not found -> {filepath}")
-            sys.exit(1)
-    print(f"Loading dependencies for {os.path.basename(args.bam)} ...")
-    conf_sites = cargaBed(args.bed)
-    read_tx = cargaRead_Transcrito(args.assoc)
-    tx_dict = cargaGTF(args.gtf)
-    
-    cpus = int(os.environ.get('SLURM_CPUS_PER_TASK', 4))
-    print(f"Processing BAM utilizing {cpus} threads...")
-    
-    samfile = pysam.AlignmentFile(args.bam, "rb", threads=6)
+    prob_threshold = args.prob_lim * 256
+    samfile = pysam.AlignmentFile(args.bam, "rb", threads=1)
     if not samfile.check_index():
         print("Error: The BAM file does not have an index (.bai). Aborting.")
         sys.exit(1)
     filas_lecturas = []
     
-    for read in samfile.fetch():
+    for read in samfile.fetch(contig=chrom):
         if read.is_secondary or read.is_supplementary or read.is_unmapped:
             continue
         
@@ -222,11 +191,11 @@ def tablaMods(args):
             continue
         last_pos = -1
         if mods:
-            query_ref = dict(read.get_aligned_pairs(matches_only=True))
+            query_ref = dict(aligned_pairs)
             chrom = read.reference_name
             strand = "-" if read.is_reverse else "+"
             valid_sites = conf_sites.get((chrom, strand), set())
-            prob_threshold = args.prob_lim * 256
+            
             # Para cada modificacion (canonical base, strand, modification) con su lista de [ (pos,qual), …] 
             
             for tupla, probs_list in mods.items():
@@ -249,67 +218,74 @@ def tablaMods(args):
                         continue
                     # Sacamos la posicion a  nivel de transcrito
                     tx_pos = genome_to_tx(ref_pos,tx_info)
-                    if tx_pos is not None and not (tx_start <= tx_pos <= tx_end):
-                        print(
-                            "INCONSISTENCIA:",
-                            read_id,
-                            tx_id,
-                            "tx_pos=", tx_pos,
-                            "tx_start=", tx_start,
-                            "tx_end=", tx_end,
-                            "ref_pos=", ref_pos,
-                            "read_pos=", read_pos,
-                        )
                     if tx_pos is not None:
                         valid_mods.append((tx_pos, prob))
                 
                 # We make sure that the list is sorted
                 valid_mods.sort(key=lambda x: x[0])
-                # Construimos el CIGAR
-                cigar_parts = []
-                prob_parts = []
-                last_pos = -1
-                
-                for tx_pos, prob in valid_mods:
-                    prob_frac = prob_ASCII(prob)
-                    # Dist de unmodified (u)
-                    dist_u = tx_pos -  last_pos -1
-                    if dist_u > 0:
-                        cigar_parts.append(f"{dist_u}U")
-                    # Si la siguiente base mod va consecutiva
-                    if dist_u == 0 and cigar_parts and cigar_parts[-1].endswith(mod_str):
-                        count_previo = int(cigar_parts[-1][:-len(mod_str)])
-                        cigar_parts[-1] = f"{count_previo + 1}{mod_str}"
-                    else:
-                        cigar_parts.append(f"1{mod_str}")
-                    prob_parts.append(f"{prob_frac}")
-                    last_pos = tx_pos
-                bases_res = tx_length - last_pos -1
-                
-                if bases_res > 0:
-                    cigar_parts.append(f"{bases_res}U")
-                '''
-                if prob_parts:
-                    fila[f"CIGAR_{cod_mod_largo[mod]}"] = "".join(cigar_parts)
-                    fila[f"Probs_{cod_mod_largo[mod]}"] = "".join(prob_parts)
-                else:
-                    fila[f"CIGAR_{cod_mod_largo[mod]}"] = f"{tx_length}U"
-                    fila[f"Probs_{cod_mod_largo[mod]}"] = ""
-                '''
                 fila[f"positions_{cod_mod_largo[mod]}"] = [pos for pos, _ in valid_mods]
                 fila[f"probabilities_{cod_mod_largo[mod]}"] = [prob_ASCII(prob) for _, prob in valid_mods]
 
             filas_lecturas.append(fila)
     samfile.close()
-    # Guardar resultados
-    df = pd.DataFrame(filas_lecturas)
+    return filas_lecturas, not_mods
+
+def tablaMods(args):
+    ''' 
+    We generate a tsv file with the CIGAR and Probs for each read in the bam 
+    file. 
+    '''
+    mods_codigos = {nombre_a_codigo[m] for m in args.mods if m in nombre_a_codigo}
+    not_mods_totales = set()
     
+    for filepath in [args.bam, args.bed, args.gtf, args.assoc]:
+        if not os.path.exists(filepath):
+            print(f"Error: File not found -> {filepath}")
+            sys.exit(1)
+            
+    print(f"Loading dependencies for {os.path.basename(args.bam)} ...")
+    conf_sites = cargaBed(args.bed)
+    read_tx = cargaRead_Transcrito(args.assoc)
+    tx_dict = cargaGTF(args.gtf)
+    
+    cpus_env = os.environ.get('SLURM_CPUS_PER_TASK')
+    cpus = int(cpus_env) if cpus_env else (os.cpu_count() or 4)
+    
+    print(f"Processing BAM utilizing {cpus} processes...")
+    # Para sacar numero de chromosomas
+    with pysam.AlignmentFile(args.bam, "rb") as samfile:
+        if not samfile.check_index():
+            print("Error: The BAM file does not have an index (.bai). Aborting.")
+            sys.exit(1)
+        chromosomes = samfile.references
+    worker = partial(procesarContig,
+                     args=args,
+                     conf_sites=conf_sites,
+                     read_tx=read_tx,
+                     tx_dict=tx_dict,
+                     mods_codigos=mods_codigos)
+    filas_totales = []
+    
+    with ProcessPoolExecutor(max_workers=cpus) as executor:
+        # executor.map aplica 'worker' a cada elemento de 'chromosomes'
+        for filas_chunk, not_mods_chunk in executor.map(worker, chromosomes):
+            filas_totales.extend(filas_chunk)
+            not_mods_totales.update(not_mods_chunk)
+    
+    # Saving our results
+    df = pd.DataFrame(filas_totales)
+        
     out_dir = os.path.dirname(args.out_tsv)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
         
     df.to_csv(args.out_tsv, sep="\t", index=None)
-    return f"Extraction completed. {len(df)} reads with modifications saved in {args.out_tsv}. Mods no cogidas: {sorted(not_mods)}" 
+    return f"Extraction completed. {len(df)} reads with modifications saved in {args.out_tsv}. Mods not included: {sorted(not_mods_totales)}" 
+
+            
+
+    
+
 
 
 if __name__ == '__main__':
