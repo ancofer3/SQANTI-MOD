@@ -25,6 +25,7 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+import time
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_MODS = [
@@ -197,6 +198,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    t_ini = time.time()
     args = parse_args()
 
     # Validación adicional para garantizar que los ficheros obligatorios existan realmente
@@ -214,6 +216,7 @@ def main() -> int:
         args.output_dir = Path(f"output_{args.prefix}")
         
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    
     filtered_bed = build_filtered_bed(
         bam_path=args.bam,
         reference_path=args.reference,
@@ -223,6 +226,8 @@ def main() -> int:
         mods=args.mods,
         min_genomic_cov=args.min_genomic_cov,
     )
+    t_bed = time.time() - t_ini
+    print(f"BED file generated in {t_bed:.2f} seconds: {filtered_bed}")
     tsv_dir = run_mods_to_cigar(
         bam_path=args.bam,
         gtf_path=args.gtf,
@@ -233,7 +238,8 @@ def main() -> int:
         prob_lim=args.prob_lim,
         mods = args.mods
     )
-    
+    t_tsv = time.time() - t_ini - t_bed
+    print(f"TSV file generated in {t_tsv:.2f} seconds:", tsv_dir)
     merge_dir = run_collapse_to_tx_and_merge(
         tsv_path=tsv_dir,
         classification_path=args.classification,
@@ -242,7 +248,8 @@ def main() -> int:
         min_cov=args.min_tx_cov,
         min_occ=args.min_tx_occ,
     )
-
+    t_merge = time.time() - t_ini - t_bed - t_tsv
+    print(f"Modified classification outputs generated in {t_merge:.2f} seconds: {merge_dir}")
     print("\nSQANTI-MOD finished successfully.")
     print(f"BED: {filtered_bed}")
     print(f"TSV directory: {tsv_dir}")
