@@ -6,7 +6,7 @@ It consists of three basic steps:
 
 1. `Genomic coverage filtering`: We use modkit, ONT's tool for working with modified bases, to generate a BED file of the modified sites and we filter out calls with low genomic coverage based on a specified threshold(with default parameters we filter out sites with < 5 reads) 
 2. `Read to transcript projection`: Projects the modification calls that surpass a given probability threshold (--prob-lim PROB_LIM, default:0.95) from genomic to transcript-level coordinates using the mapped bam, the GTF with the reconstructed transcriptome and a TSV file with the read-transcript association (e.g. transcript_model_reads.tsv file from the isoquant output). 
-3. `Transcript-level modification collapse and merging to SQANTI3 classification file`: It groups the modified basecalls by transcript and generates for each transcript a list of all possible modified positions and the number of modifications called for each. It filters out positions that don't surpass a given number of read coverage (--min-tx-cov MIN_TX_COV, default:20) and fraction of occupancy (--min-tx-occ MIN_TX_OCC, default:0.2). 
+3. `Transcript-level modification collapse and merging to SQANTI3 classification file`: It groups the modified basecalls by transcript and generates for each transcript a list of all possible modified positions and the number of modifications called for each, as well as the occupancy (fraction of bases that surpass the probability threshold for each site) It filters out positions that don't surpass a given number of read coverage (--min-tx-cov MIN_TX_COV, default:20) and fraction of occupancy (--min-tx-occ MIN_TX_OCC, default:0.2). Then, the generated information is merged to the given SQANTI3 classification file.
 
 ## Requirements
 

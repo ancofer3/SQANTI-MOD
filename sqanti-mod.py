@@ -69,7 +69,15 @@ def build_filtered_bed(
         "-t",
         str(cpus)
     ]
-    run(cmd)
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[CRITICAL ERROR] modkit failed with exit code {e.returncode}", file=sys.stderr)
+        sys.exit(e.returncode)
+        
+    if not bed_path.exists() or bed_path.stat().st_size == 0:
+        print(f"[CRITICAL ERROR] The file {bed_path} does not exist or is empty.", file=sys.stderr)
+        sys.exit(1)
     #Filtramos al mínimo inputeado
     with bed_path.open("r", encoding="utf-8") as src, filtered_path.open("w", encoding="utf-8") as dst:
         for line in src:
