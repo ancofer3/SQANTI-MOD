@@ -74,6 +74,7 @@ Useful options:
 --prob-lim FLOAT           Probability threshold (0.95)
 --min-tx-cov INTEGER       Transcript-level coverage threshold (20)
 --min-tx-occ FLOAT         Occupancy threshold (0.2)
+--cpus INTEGER             Number of cpus to use (1)
 ```
 
 Please make sure that you have an index .bai file for your bams and that the isoform ids coincide between the GTF, the association TSV and the SQANTI3 classification file. For the --mods parameter, please use the short names as they appear in the "Mod" column of the following table (m6A,m5C):
@@ -91,7 +92,7 @@ Please make sure that you have an index .bai file for your bams and that the iso
 
 ## Notes
 - This is a work-in-progress repo
-- The extraction utilizes the number of CPUs defined in `SLURM_CPUS_PER_TASK`. If the variable is not defined the default value is 4
+- The extraction utilizes the number of CPUs defined in --cpus, if the value is not given it will use 1.
 - Transcriptomic coordinates of the pipeline are 0-based.
 - Please revise paths and variables of each sample before launching serial jobs. 
 - The workflow for one sample with around 1.5M mapped reads using 16 cpus takes around 18 minutes. Please note that this will be improved in the future. 
