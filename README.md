@@ -1,5 +1,4 @@
 # SQANTI-MOD
-![Logo](logo.png)
 
 Pipeline for the integration of long-reads modification calls in modBAM files into the SQANTI classification file of a reconstructed transcriptome.
 
