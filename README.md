@@ -25,11 +25,22 @@ Installation of the Python dependencies in the active environment:
 python -m pip install pysam pandas numpy
 ```
 
-## Input
+## Input files and parameters
 - An aligned and indexed BAM file (`sample.bam` and `sample.bam.bai`) containing modification MM/ML tags.
 - GTF annotation resulting from a transcript reconstruction tool such as isoquant, bambu of flair (e.g. isoquant's extended_annotation.gtf file)
 - Reference genome in FASTA format (the same reference that was used for the transcriptome reconstruction)
 - Read-to-transcript association file, in TSV format or gzip-compressed TSV format (e.g. transcript_model_reads.tsv file from the isoquant output). The first column should contain the read ids as they appear in your modbam files and the second the id of the isoform to which the read is associated, as it appears in the gtf and classification files. The read-isoform relation should be of one-to-many (1:N). For example: 
+-Modifications to include. You may use the shorted names (m5C,m6A,...)
+| Mod | Name | SAM Code | ChEBI |
+|---|---|---|---|
+| m5C | 5-Methylcytosine | `C+m` | CHEBI:27551 |
+| m6A | N(6)-Methyladenosine | `A+a` | CHEBI:21891 |
+| inosine | Inosine | `A+17596` | CHEBI:17596 |
+| pseU | Pseudouridine | `T+17802` | CHEBI:17802 |
+| 2OmeC | 2'-O-methylcytidine | `C+19228` | CHEBI:19228 |
+| 2OmeA | 2'-O-methyladenosine | `A+69426` | CHEBI:69426 |
+| 2OmeG | 2'-O-methylguanosine | `G+19229` | CHEBI:19229 |
+| 2OmeU | 2'-O-methyluridine | `T+19227` | CHEBI:19227 |
 
 ```text
 read_id transcript_id
@@ -66,14 +77,14 @@ python sqanti-mod.py \
 Useful options:
 
 ```text
---mods MOD [MOD ...]       modifications to analyze (m6A)
+--mods MOD [MOD ...]       modifications to analyze (m6A). We recommend using the 
 --min-genomic-cov INTEGER  Genomic coverage threshold (5)
 --prob-lim FLOAT           Probability threshold (0.95)
 --min-tx-cov INTEGER       Transcript-level coverage threshold (20)
 --min-tx-occ FLOAT         Occupancy threshold (0.2)
 ```
 
-Please make sure that you have an index .bai file for your bams and that the isoform ids coincide between the GTF, the association TSV and the SQANTI3 classification file.
+Please make sure that you have an index .bai file for your bams and that the isoform ids coincide between the GTF, the association TSV and the SQANTI3 classification file. We recommend 
 
 ## Notes
 - This is a work-in-progress repo
