@@ -64,6 +64,7 @@ python sqanti-mod.py \
   --mods m5C m6A 2OmeC pseU 2OmeU inosine 2OmeA \
   --prob-lim 0.9 \
   --min-tx-cov 5
+  --cpus 16
 ```
 
 Useful options:
