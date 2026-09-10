@@ -249,9 +249,9 @@ def tablaMods(args):
     conf_sites = cargaBed(args.bed)
     read_tx = cargaRead_Transcrito(args.assoc)
     tx_dict = cargaGTF(args.gtf)
-    
-    cpus_env = os.environ.get('SLURM_CPUS_PER_TASK')
-    cpus = int(cpus_env) if cpus_env else (os.cpu_count() or 4)
+    # Vamos a hacer que si no se da valor de CPUs, se tome aprox el 80 porciento de las available
+    cpus_env = args.cpus 
+    cpus = int(cpus_env) if cpus_env else 1
     
     print(f"Processing BAM utilizing {cpus} processes...")
     # Para sacar numero de chromosomas
@@ -301,7 +301,7 @@ if __name__ == '__main__':
     parser.add_argument('--out_tsv', required=True, help="Path where the output TSV will be saved")
     parser.add_argument('--mods', nargs="+", required=True, help="Modifications to include")
     parser.add_argument('--prob_lim', type=float, default=0.95, help="Minimum probability threshold for modifications (default: 0.95)")
-    
+    parser.add_argument('--cpus', type=int, default=None, help="Number of CPUs to use (default: all available)")
     args = parser.parse_args()
     
     print(tablaMods(args))

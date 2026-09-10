@@ -46,12 +46,13 @@ def build_filtered_bed(
     modkit_bin: str,
     mods: list[str],
     min_genomic_cov: int,
+    cpus: int
 ) -> Path:
     # Creamos el directorio output si no está ya creado
     print("Starting modkit bed generation and filtering")
     bed_dir = out_dir 
     bed_dir.mkdir(parents=True, exist_ok=True)
-    cpus = int(os.environ.get('SLURM_CPUS_PER_TASK', 4))
+    cpus = int(cpus) if cpus else 1
     bed_path = bed_dir / f"{sample}.bed"
     filtered_path = bed_dir / f"{sample}_filtered.bed"
     log_path = out_dir / "logs" / f"pileup_{sample}.txt"
@@ -193,7 +194,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prob-lim", type=float, default=0.95, help="Probability cutoff for modifications.")
     parser.add_argument("--min-tx-cov", type=int, default=20, help="Minimum read coverage for a modification.")
     parser.add_argument("--min-tx-occ", type=float, default=0.2, help="Minimum modification occupancy.")
-
+    parser.add_argument("--cpus", type=int, default=1, help="Number of CPUs to use (default: 1).")
     return parser.parse_args()
 
 
@@ -225,6 +226,7 @@ def main() -> int:
         modkit_bin=args.modkit,
         mods=args.mods,
         min_genomic_cov=args.min_genomic_cov,
+        cpus=args.cpus
     )
     t_bed = time.time() - t_ini
     print(f"BED file generated in {t_bed:.2f} seconds: {filtered_bed}")
