@@ -1,7 +1,7 @@
 # SQANTI-MOD
 
 <p align="center">
-  <img src="logo_v4.png" alt="Logo" width="800">
+  <img src="logo_v5.png" alt="Logo" width="800">
 </p>
 
 Pipeline for the integration of long-reads modification calls in modBAM files into the SQANTI classification file of a reconstructed transcriptome.
